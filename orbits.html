@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+    <meta charset='utf-8'>
+    
+</head>
+
+<body>
+    <h1>Orbit Tracker</h1>
+    
+    <div id='holds_canvas'>
+        <canvas id='canvas' height='600px' width='600px'>
+            Your browser doesn't support the canvas element
+        </canvas>
+    </div>
+    
+    <div id='control_panel'>
+        
+    </div>
+    
+    <p>
+        <button onclick='addPlanet()'>Add</button>
+        <button onclick='removePlanet()'>Remove</button>
+    </p>
+    
+    <p>
+        <button onclick='clearInterval(orbitDance)'>Stop</button>
+    </p>
+    
+ <script>
+        function customize(change, index, key) {
+            
+            change = parseInt(change);
+            
+            if (key === 'sym') {  
+                change = String.fromCharCode(change);  
+            }
+            
+            planets[index][key] = change;
+            planets[index].speed = planets[index].getSpeed();
+            
+        }
+        
+        function drawPath(e0) {
+            let can = document.getElementById('canvas').getContext('2d');
+            
+            can.beginPath();
+            can.strokeStyle = '#BBBBBB';
+            can.arc(305, 295, e0.radius, 0, 2*Math.PI);
+            can.stroke();
+        }
+        
+        function drawBody(b0) {
+            let horizontal = 300 + b0.radius*Math.sin(b0.positionAngle);
+            let vertical = 300 + b0.radius*Math.cos(b0.positionAngle);
+            let canvas = document.getElementById('canvas').getContext('2d');
+            
+            b0.positionAngle = b0.addModulo();
+            
+            canvas.fillText(b0.sym, horizontal, vertical)
+            
+        }
+        
+        function createCanvas(name, h, w) {
+            
+            let c0 = document.createElement('canvas');
+            
+            c0.setAttribute('id', name);
+            c0.setAttribute('height', h);
+            c0.setAttribute('width', w);
+            
+            return c0
+        }
+        
+        function startDance() {
+            document.getElementById('canvas').remove();
+            
+            let canElement = createCanvas('canvas', '600px', '600px');
+            
+            document.getElementById('holds_canvas').appendChild(canElement);
+            
+            planets.forEach(drawPath);
+            planets.forEach(drawBody);
+            
+        }
+        
+        function constructPlanets(round, totalRounds) {
+            
+            let p = Object.create(mechanics);
+                
+            p.callNum = round;
+            p.radius = 20 + round*(290/totalRounds);
+            p.rotation = 1;
+            p.sym = String.fromCharCode(9899);
+            p.speed = p.getSpeed();
+            p.positionAngle = Math.PI;
+            
+            return p
+        }
+        
+        function constructControls(round, totalRounds) {
+            function optionElements(pairArr) {
+                let arr = [];
+                
+                for(let i = 0; i < pairArr.length; i++) {
+                    let o0 = document.createElement('option');
+                    let oTxt = document.createTextNode(pairArr[i][1]);
+                    
+                    o0.setAttribute('value', pairArr[i][0]);
+                    o0.appendChild(oTxt);
+                    
+                    arr.push(o0);
+                }
+                
+                return arr
+            }
+            
+            let p = document.createElement('p');
+            
+            let strBase = 'customize(this.value, ' + round + ',';
+            let directionValues = [[1, 'Clockwise'], [-1, 'Counter-clockwise']];
+            let symbolValues = [[9899, String.fromCharCode(9899)], [9898, String.fromCharCode(9898)], [9632, String.fromCharCode(9632)], [9633, String.fromCharCode(9633)]];
+            
+            let scaleRadius = document.createElement('input');
+            
+            scaleRadius.setAttribute('onchange', strBase + ' "radius")');
+            scaleRadius.setAttribute('type', 'range');
+            scaleRadius.setAttribute('max', 290);
+            scaleRadius.setAttribute('min', 20);
+            scaleRadius.setAttribute('step', 1);
+            scaleRadius.setAttribute('value', 20 + round*(290/totalRounds));
+            
+            p.append(scaleRadius);
+            
+            let selectDir = document.createElement('select');
+            
+            selectDir.setAttribute('onchange', strBase + '"rotation")' );
+            
+            let dirOptions = optionElements(directionValues);
+            
+            dirOptions.forEach(
+                function(e0) {
+                    selectDir.appendChild(e0);
+            });
+            
+            p.appendChild(selectDir);
+            
+            let selectSym = document.createElement('select');
+            
+            selectSym.setAttribute('onchange', strBase + '"sym")');
+            
+            let symOptions = optionElements(symbolValues);
+            
+            symOptions.forEach(
+                function (e0) {
+                    selectSym.appendChild(e0);    
+            });
+            
+            p.appendChild(selectSym);
+            
+            return p
+        }
+        
+        function arrayOfObjects(num, objConstructor) {
+            
+            let arr = [];
+            
+            for (let i = 0; i < num; i++) {
+                
+                arr.push( objConstructor(i, num) );
+                
+            }
+            
+            return arr
+        }
+        
+        
+        
+        function addPlanet() {
+            let pnt = document.getElementById('control_panel')
+            let r = pnt.children.length;
+            let call = r - 1;
+            
+            let cp = constructControls(call, r);
+            pnt.appendChild(cp);
+            
+            let pl = constructPlanets(call, r);
+            planets.push(pl);
+            
+        }
+        
+        
+        function removePlanet() {
+            planets.pop();
+            document.getElementById('control_panel').lastElementChild.remove();
+            
+        }
+        
+        var mechanics = {
+            getSpeed: function () {
+                
+                return this.rotation*( 13.5/( Math.pow(this.radius, 3/2) ) ) //'this.rotation' should be 1 or -1.
+                
+            },
+            
+            addModulo: function () {
+                
+                if (this.positionAngle > 2*Math.PI) {
+                    
+                    return  this.positionAngle - 2*Math.PI + this.speed;
+                
+                } else if (this.positionAngle < 0) {
+                    
+                    return 2*Math.PI - this.positionAngle + this.speed
+                
+                } else {
+                    
+                    return this.positionAngle + this.speed
+                    
+                }
+            }
+            
+        };
+        
+        
+        var planets = arrayOfObjects(5, constructPlanets);
+        var panelPara = arrayOfObjects(5, constructControls);
+        
+        panelPara.forEach(
+            function (c0) {
+                document.getElementById('control_panel').appendChild(c0);    
+        });
+        
+        var orbitDance = setInterval(startDance, 10);
+        
+        
+        
+        
+        
+        
+        /*
+        Use linked objects design method.
+            1. Can maps be linked to an object?
+            
+        var mechanics: a master object that holds the functions that will
+            calculate dependent data, the bodies speed. It also holds the
+            modulo 2pi addition function.
+            
+                
+        functions for drawing on canvas
+            1. Create a canvas repeatedly with slight movements
+            2. Draw symbol in canvas.
+            3. Draw orbital path in the canvas.
+         
+        Global varibles
+            var planets: an array of planet objects.
+            
+        Data Structure for Planet
+            callNum: used to created a string needed in constructing control panels.
+            radius: 
+            rotation: clockwise or counter-clockwise
+            sym: symbol of planet, four options
+            speed: Smaller radius, faster speed
+            positionAngle: The angle part of polar numbers, radius is the other part.
+            
+                
+        
+        
+        Notes to Self
+            1. Don't worry about keeping orbits from overlapping.
+            2. Don't worry about keeping bodies in order of radius amount in the array.
+            3. Don't use a table in the HTML to hold the control panel.
+        
+        */
+        
+        
+        
+    </script>   
+    
+    
+</body>
+
+
+
+</html>
